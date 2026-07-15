@@ -8,7 +8,11 @@
 # (Ansible)` is a uniform menu entry across the substrate consumers.
 set -euo pipefail
 
-script_dir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+# dirname (not ${BASH_SOURCE%/*}) so this resolves whether $0 arrives with
+# POSIX slashes (WSL) or backslashes (the menu invokes it via Git Bash with
+# a Windows Join-Path argv[0]); the %/* string-strip only knows '/' and would
+# leave the whole path, cd-ing into the script file itself.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ansible_root="$(cd "${script_dir}/.." && pwd)"
 
 # Locate the substrate sibling (override with COMMON_ANSIBLE_ROOT).
