@@ -4,12 +4,13 @@ name: Infrastructure-E2E
 # Always runs the full lifecycle layer - a users change can cascade to break
 # runner registration, so the full stack must be verified.
 #
-# Pins all four layers to ansible so this repo's PR exercises the full Ansible
+# Pins all five layers to ansible so this repo's PR exercises the full Ansible
 # stack - its own users flow (create-users.sh / remove-users.sh on the
-# Common-Ansible substrate), plus the runner, toolchain and files flows the full
-# lifecycle cascades into. The toolchain flow runs provision-toolchains.sh
+# Common-Ansible substrate), plus the runner, toolchain, files and env flows the
+# full lifecycle cascades into. The toolchain flow runs provision-toolchains.sh
 # against the Common-Ansible jdk / dotnet_sdk / dotnet_tools roles; the files
-# flow runs provision-files.sh against the vm_files role. The ansible flows need
+# flow runs provision-files.sh against the vm_files role; the env flow runs
+# provision-env.sh against the vm_env_vars role. The ansible flows need
 # WslDistro in the E2EConfig vault. This pin does not cover the PowerShell
 # create-users.ps1 / remove-users.ps1 path - use an explicit override or a
 # matrix for that.
@@ -26,5 +27,6 @@ jobs:
           "usersFlow":"ansible",
           "runnersFlow":"ansible",
           "toolchainsFlow":"ansible",
-          "filesFlow":"ansible"
+          "filesFlow":"ansible",
+          "envVarsFlow":"ansible"
         }
