@@ -128,6 +128,12 @@ provisioner config by `vmName`.
     // no users in this config are members (e.g. a shared directory group
     // managed by Infrastructure-GitHubRunners). Supports optional gid pinning
     // - see fields table below.
+    //
+    // Do NOT declare "docker" here with a pinned gid: that group is created
+    // by Infrastructure-Vm-Provisioner's docker package with a distro-assigned
+    // gid, and a conflicting pin fails the groups role. A user's "docker"
+    // supplementary membership (below) resolves against that provisioner-
+    // created group - as long as provisioning runs before this reconcile.
     "groups": [
       {
         "groupName": "u-actions-runner"
@@ -142,11 +148,22 @@ provisioner config by `vmName`.
         // act as this user only via sudoers delegation from u-runner-deploy.
         "shell":    "/usr/sbin/nologin",
         "homeDir":  "/home/u-actions-runner",
-        // No supplementary groups needed. The primary group u-actions-runner
-        // is declared in the groups section above; useradd adopts it via -g
-        // rather than creating a new one. u-runner-deploy joins that primary
-        // group as a supplementary member for write access.
-        "groups":       [],
+        // Supplementary groups. The primary group u-actions-runner is declared
+        // in the groups section above; useradd adopts it via -g rather than
+        // creating a new one. u-runner-deploy joins that primary group as a
+        // supplementary member for write access.
+        //
+        // "docker" is required ONLY when this runner executes container-based
+        // CI (the Common-Automation lint composites - actionlint, yamllint,
+        // ansible-lint - run their linters in Docker and need the socket at
+        // /var/run/docker.sock). This config is the single authority for the
+        // grant: the users role sets groups with append:false, so a docker
+        // membership added by any other repo is stripped on the next run.
+        // Infrastructure-Vm-Provisioner installs the daemon and creates the
+        // docker group; Infrastructure-GitHubRunners' register play asserts
+        // this membership and fails fast if it is missing. Omit "docker" for
+        // runners that never touch containers.
+        "groups":       ["docker"],
         // Lines written verbatim to /etc/sudoers.d/{username}.
         // Empty list = file absent (removed if previously present).
         "sudoersRules": []
@@ -529,7 +546,8 @@ ansible.cfg                     Lint shim: keeps the fleet ansible-lint gate act
 scripts/
   Run-Tests.ps1  Run-IntegrationTests.ps1   Pester unit / integration runners
   run-ci-yaml-and-bash.sh / .bat            MAIN: full local lint + bats
-  run-lint-yaml-and-bash.sh / .bat          Lint half only
+  run-lint-yaml-and-bash.sh / .bat          Lint half only (cross-cutting linters + ansible-lint)
+  run-lint-ansible.sh                       ansible-lint via the shared Common-Ansible controller venv
   run-tests-bash.sh / .bat                  Bats test half only
   fix-permissions.sh / .bat                 Re-stage +x on tracked *.sh
 docs/dev/                       playbook-conventions.md + implementation/
